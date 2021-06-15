@@ -5,7 +5,7 @@ const server = require('http').Server(app);
 //Initialise a Socket.io server
 const io = require('socket.io')(server, {
   cors: {
-    origin: 'http://localhost:3000',
+    origin: '*',
   },
 });
 
@@ -16,7 +16,7 @@ const io = require('socket.io')(server, {
 // const nextHandler = nextApp.getRequestHandler();
 
 // Port on which the server runs
-const port = 5000;
+const port = 5100;
 
 // UUID to generate random call IDs
 const { v4: uuidV4 } = require('uuid');
