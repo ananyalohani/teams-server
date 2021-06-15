@@ -3,7 +3,11 @@ const app = require('express')();
 const server = require('http').Server(app);
 
 //Initialise a Socket.io server
-const io = require('socket.io')(server);
+const io = require('socket.io')(server, {
+  cors: {
+    origin: 'http://localhost:3000',
+  },
+});
 
 // // Configure the Next.js app
 // const next = require('next');
