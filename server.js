@@ -74,8 +74,12 @@ io.on('connection', (socket) => {
     if (room) {
       // remove disconnected user from list of users
       room = room.filter((id) => id !== socket.id);
+      delete socketToRoom[socket.id];
       users[roomId] = room;
     }
+
+    console.log('users:', users);
+    console.log('socketToRoom:', socketToRoom);
 
     // signal to the client side that the user left
     socket.broadcast.emit('user-left', socket.id);
