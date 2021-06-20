@@ -9,17 +9,9 @@ const io = require('socket.io')(server, {
   },
 });
 
-// // Configure the Next.js app
-// const next = require('next');
-// const dev = process.env.NODE_ENV !== 'production';
-// const nextApp = next({ dev });
-// const nextHandler = nextApp.getRequestHandler();
-
 // Port on which the server runs
-const port = 5100;
-
-// UUID to generate random call IDs
-const { v4: uuidV4 } = require('uuid');
+const PORT = 5100;
+const MAX_CAPACITY = 3;
 
 // Object containing details about people in the room
 const users = {};
@@ -29,21 +21,29 @@ const socketToRoom = {};
 io.on('connection', (socket) => {
   // Join a room
   socket.on('join-room', (roomId) => {
-    if (users[roomId]) {
-      const length = users[roomId].length;
-      if (length === 4) {
-        socket.emit('room-full');
-        return;
-      }
-      users[roomId].push(socket.id);
-    } else {
-      users[roomId] = [socket.id];
-    }
-    socketToRoom[socket.id] = roomId;
-    const usersInThisRoom = users[roomId].filter((id) => id !== socket.id);
-    socket.join(roomId);
+    // check that the same socket doesn't join room twice
+    const isUserInRoom = users[roomId]?.includes(socket.id);
 
-    socket.emit('all-users', usersInThisRoom);
+    if (!isUserInRoom) {
+      if (users[roomId]) {
+        const length = users[roomId].length;
+        if (length === MAX_CAPACITY) {
+          socket.emit('room-full');
+          return;
+        }
+        users[roomId].push(socket.id);
+      } else {
+        users[roomId] = [socket.id];
+      }
+      socketToRoom[socket.id] = roomId;
+      const usersInThisRoom = users[roomId].filter((id) => id !== socket.id);
+      socket.join(roomId);
+
+      socket.emit('all-users', usersInThisRoom);
+    }
+
+    console.log('users:', users);
+    console.log('socketToRoom:', socketToRoom);
   });
 
   // Send a signal
@@ -82,7 +82,7 @@ io.on('connection', (socket) => {
   });
 });
 
-server.listen(port, (err) => {
+server.listen(PORT, (err) => {
   if (err) throw err;
-  console.log(`Server ready on http://localhost:${port}`);
+  console.log(`Server ready on http://localhost:${PORT}`);
 });
