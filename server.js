@@ -2,7 +2,7 @@
 const app = require('express')();
 const server = require('http').Server(app);
 
-//Initialise a Socket.io server
+// Initialise a Socket.io server
 const io = require('socket.io')(server, {
   cors: {
     origin: '*',
@@ -11,75 +11,81 @@ const io = require('socket.io')(server, {
 
 // Port on which the server runs
 const PORT = 5100;
-const MAX_CAPACITY = 3;
+const MAX_CAPACITY = 4;
 
 // Object containing details about people in the room
-const users = {};
-const socketToRoom = {};
+const roomToUsers = {};
+const usersToRoom = {};
 
 // When socket gets connected
 io.on('connection', (socket) => {
   // Join a room
   socket.on('join-room', (roomId) => {
-    // check that the same socket doesn't join room twice
-    const isUserInRoom = users[roomId]?.includes(socket.id);
-
-    if (!isUserInRoom) {
-      if (users[roomId]) {
-        const length = users[roomId].length;
+    // check that the same user doesn't join room twice
+    const isUserInRoom = roomToUsers[roomId]?.includes(socket.id);
+    if (isUserInRoom) {
+      socket.emit('user-already-joined');
+      return;
+    } else {
+      if (roomToUsers[roomId]) {
+        const length = roomToUsers[roomId].length;
         if (length === MAX_CAPACITY) {
           socket.emit('room-full');
           return;
         }
-        users[roomId].push(socket.id);
+        roomToUsers[roomId].push(socket.id);
       } else {
-        users[roomId] = [socket.id];
+        roomToUsers[roomId] = [socket.id];
       }
-      socketToRoom[socket.id] = roomId;
-      const usersInThisRoom = users[roomId].filter((id) => id !== socket.id);
+
+      usersToRoom[socket.id] = roomId;
+      const usersInThisRoom = roomToUsers[roomId].filter(
+        (id) => id !== socket.id
+      );
+      console.log(usersInThisRoom);
       socket.join(roomId);
 
       socket.emit('all-users', usersInThisRoom);
     }
 
-    console.log('users:', users);
-    console.log('socketToRoom:', socketToRoom);
+    console.log('roomToUsers:', roomToUsers);
+    console.log('usersToRoom:', usersToRoom);
   });
 
   // Send a signal
-  socket.on('sending-signal', (payload) => {
-    io.to(payload.userToSignal).emit('user-joined', {
-      signal: payload.signal,
-      callerId: payload.callerId,
+  socket.on('sending-signal', ({ userToSignal, callerId, signal }) => {
+    io.to(userToSignal).emit('user-joined', {
+      signal,
+      callerId,
     });
   });
 
   // Receive a signal
-  socket.on('returning-signal', (payload) => {
-    io.to(payload.callerId).emit('receiving-returned-signal', {
-      signal: payload.signal,
+  socket.on('returning-signal', ({ signal, callerId }) => {
+    io.to(callerId).emit('receiving-returned-signal', {
+      signal,
       id: socket.id,
     });
   });
 
   // Send message on the group chat
-  socket.on('send-message', (payload) => {
-    socket.to(payload.roomId).emit('receive-message', payload.msgData);
+  socket.on('send-message', ({ roomId, msgData }) => {
+    socket.to(roomId).emit('receive-message', { msgData });
   });
 
   // Disconnect from socket
   socket.on('disconnect', () => {
-    const roomId = socketToRoom[socket.id];
-    let room = users[roomId];
+    const roomId = usersToRoom[socket.id];
+    let room = roomToUsers[roomId];
     if (room) {
       // remove disconnected user from list of users
       room = room.filter((id) => id !== socket.id);
-      delete socketToRoom[socket.id];
-      users[roomId] = room;
+      delete usersToRoom[socket.id];
+      roomToUsers[roomId] = room;
     }
 
-    console.log('users:', users);
-    console.log('socketToRoom:', socketToRoom);
+    console.log('roomToUsers:', roomToUsers);
+    console.log('usersToRoom:', usersToRoom);
 
     // signal to the client side that the user left
     socket.broadcast.emit('user-left', socket.id);
