@@ -7,33 +7,55 @@ function socketIOServer(server, MAX_CAPACITY) {
   });
 
   // keep track of all the rooms and the users
+  const socketsInRoom = {};
   const usersInRoom = {};
 
   // on successful connection to the socket
   io.on('connection', (socket) => {
     // join the room with the given id
-    socket.on('join-room', (roomId) => {
+    socket.on('join-room', ({ roomId, user }) => {
       // check if user is already in the room
-      if (usersInRoom[roomId]?.includes(socket.id)) {
+      if (
+        socketsInRoom[roomId]?.includes(socket.id) ||
+        usersInRoom[roomId]?.includes(user)
+      ) {
         socket.emit('user-already-joined');
         return;
       }
 
       // check if maximum room capacity has been reached
-      if (usersInRoom[roomId]?.length === MAX_CAPACITY) {
+      if (
+        socketsInRoom[roomId]?.length === MAX_CAPACITY ||
+        usersInRoom[roomId]?.length === MAX_CAPACITY
+      ) {
         socket.emit('room-full');
         return;
       }
 
-      // add the user to the room
-      if (usersInRoom[roomId]) {
-        usersInRoom[roomId].push(socket.id);
+      user.socketId = socket.id;
+
+      // add the socket to the room
+      if (socketsInRoom[roomId]) {
+        socketsInRoom[roomId].push(socket.id);
       } else {
-        usersInRoom[roomId] = [socket.id];
+        socketsInRoom[roomId] = [socket.id];
       }
 
       // join the room through the socket
       socket.join(roomId);
+
+      // add the user obj to the room and send the updated user
+      // list to all the sockets in the room
+      if (usersInRoom[roomId]) {
+        usersInRoom[roomId].push(user);
+      } else {
+        usersInRoom[roomId] = [user];
+      }
+      io.sockets
+        .in(roomId)
+        .emit('updated-users-list', { usersInThisRoom: usersInRoom[roomId] });
+
+      console.log(socketsInRoom);
       console.log(usersInRoom);
     });
 
@@ -52,15 +74,26 @@ function socketIOServer(server, MAX_CAPACITY) {
     // on disconnection of the socket
     socket.on('disconnect', () => {
       // remove the user from the existing array
-      const rooms = Object.keys(usersInRoom);
+      const rooms = Object.keys(socketsInRoom);
       rooms.forEach((roomId) => {
-        if (usersInRoom[roomId].includes(socket.id)) {
-          const remainingUsers = usersInRoom[roomId].filter(
+        if (socketsInRoom[roomId].includes(socket.id)) {
+          const remainingUsers = socketsInRoom[roomId].filter(
             (u) => u !== socket.id
           );
-          usersInRoom[roomId] = remainingUsers;
+          const remainingUserObj = usersInRoom[roomId].filter(
+            (u) => u.socketId !== socket.id
+          );
+
+          socketsInRoom[roomId] = remainingUsers;
+          usersInRoom[roomId] = remainingUserObj;
+
+          // send the updated users list to all the sockets in the room
+          io.sockets.in(roomId).emit('updated-users-list', {
+            usersInThisRoom: usersInRoom[roomId],
+          });
         }
       });
+      console.log(socketsInRoom);
       console.log(usersInRoom);
     });
   });
