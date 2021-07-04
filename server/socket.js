@@ -17,7 +17,7 @@ function socketIOServer(server, MAX_CAPACITY) {
       // check if user is already in the room
       if (
         socketsInRoom[roomId]?.includes(socket.id) ||
-        usersInRoom[roomId]?.includes(user)
+        usersInRoom[roomId]?.find((u) => u.id === user.id)
       ) {
         socket.emit('user-already-joined');
         return;
@@ -46,11 +46,14 @@ function socketIOServer(server, MAX_CAPACITY) {
 
       // add the user obj to the room and send the updated user
       // list to all the sockets in the room
+
       if (usersInRoom[roomId]) {
-        usersInRoom[roomId].push(user);
+        const item = usersInRoom[roomId]?.find((u) => u.id === user.id);
+        if (!item) usersInRoom[roomId].push(user);
       } else {
         usersInRoom[roomId] = [user];
       }
+
       io.sockets
         .in(roomId)
         .emit('updated-users-list', { usersInThisRoom: usersInRoom[roomId] });
