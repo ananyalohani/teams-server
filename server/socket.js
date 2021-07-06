@@ -6,11 +6,16 @@ function socketIOServer(server, MAX_CAPACITY) {
     },
   });
 
+  const {
+    getChatSession,
+    addChatToSession,
+    clearChatHistory,
+  } = require('./requests');
+
   // keep track of all the rooms and the users
   const socketsInRoom = {};
   const usersInRoom = {};
 
-  // on successful connection to the socket
   io.on('connection', (socket) => {
     // join the room with the given id
     socket.on('join-room', ({ roomId, user }) => {
@@ -54,6 +59,11 @@ function socketIOServer(server, MAX_CAPACITY) {
         usersInRoom[roomId] = [user];
       }
 
+      getChatSession(roomId).then((chatHistory) => {
+        console.log(chatHistory);
+        io.sockets.in(roomId).emit('chat-history', { chatHistory });
+      });
+
       io.sockets
         .in(roomId)
         .emit('updated-users-list', { usersInThisRoom: usersInRoom[roomId] });
@@ -63,15 +73,21 @@ function socketIOServer(server, MAX_CAPACITY) {
     });
 
     // listen to incoming 'send-message' socket events
-    socket.on('send-message', ({ roomId, msgData }) => {
+    socket.on('send-message', ({ roomId, chat }) => {
       // emit the message to all the sockets connected to the room
-      socket.to(roomId).emit('receive-message', { msgData });
+      addChatToSession(chat, roomId);
+      socket.to(roomId).emit('receive-message', { chat });
     });
 
     // listen to incoming 'raise-hand' socket events
     socket.on('raise-hand', ({ userId, roomId }) => {
       // emit the raise-hand event to all sockets connected to the room
       socket.to(roomId).emit('user-raised-hand', { userId });
+    });
+
+    // listen to incoming 'clear-chat-history' socket events
+    socket.on('clear-chat-history', ({ roomId }) => {
+      clearChatHistory(roomId);
     });
 
     // on disconnection of the socket
