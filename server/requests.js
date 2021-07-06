@@ -58,4 +58,4 @@ async function clearChatHistory(roomId) {
   }
 }
 
-module.exports = { getChatSession, addChatToSession };
+module.exports = { getChatSession, addChatToSession, clearChatHistory };
