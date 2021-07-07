@@ -58,4 +58,47 @@ async function clearChatHistory(roomId) {
   }
 }
 
-module.exports = { getChatSession, addChatToSession, clearChatHistory };
+async function addRoomToUser(userId, roomId) {
+  try {
+    const response = await fetch(
+      `${url.client}/api/user-rooms?userId=${userId}`
+    );
+    const rooms = await response.json();
+
+    const item = rooms.find((r) => r.roomId === roomId);
+    if (item) {
+      item.date = new Date();
+    } else {
+      rooms.push({
+        roomId: roomId,
+        date: new Date(),
+        meetingLink: `https://msft.lohani.dev/room/${roomId}`,
+        chatLink: `https://msft.lohani.dev/room/${roomId}/chat`,
+      });
+    }
+
+    const stringifiedRooms = JSON.stringify(rooms);
+
+    const reqBody = {
+      userId: userId,
+      rooms: stringifiedRooms,
+    };
+
+    fetch(`${url.client}/api/user-rooms`, {
+      method: 'PUT',
+      body: JSON.stringify(reqBody),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+module.exports = {
+  getChatSession,
+  addChatToSession,
+  clearChatHistory,
+  addRoomToUser,
+};
