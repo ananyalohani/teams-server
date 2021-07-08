@@ -10,6 +10,7 @@ function socketIOServer(server, MAX_CAPACITY) {
     getChatSession,
     addChatToSession,
     clearChatHistory,
+    addRoomToUser,
   } = require('./requests');
 
   // keep track of all the rooms and the users
@@ -48,7 +49,7 @@ function socketIOServer(server, MAX_CAPACITY) {
 
       // join the room through the socket
       socket.join(roomId);
-
+      addRoomToUser(user.id, roomId);
       // add the user obj to the room and send the updated user
       // list to all the sockets in the room
 
@@ -60,7 +61,7 @@ function socketIOServer(server, MAX_CAPACITY) {
       }
 
       getChatSession(roomId).then((chatHistory) => {
-        console.log(chatHistory);
+        // console.log(chatHistory);
         io.sockets.in(roomId).emit('chat-history', { chatHistory });
       });
 
@@ -68,8 +69,8 @@ function socketIOServer(server, MAX_CAPACITY) {
         .in(roomId)
         .emit('updated-users-list', { usersInThisRoom: usersInRoom[roomId] });
 
-      console.log(socketsInRoom);
-      console.log(usersInRoom);
+      // console.log(socketsInRoom);
+      // console.log(usersInRoom);
     });
 
     // listen to incoming 'send-message' socket events
@@ -85,8 +86,14 @@ function socketIOServer(server, MAX_CAPACITY) {
       socket.to(roomId).emit('user-raised-hand', { userId });
     });
 
+    socket.on('unraise-hand', ({ userId, roomId }) => {
+      // emit the raise-hand event to all sockets connected to the room
+      socket.to(roomId).emit('user-unraised-hand', { userId });
+    });
+
     // listen to incoming 'clear-chat-history' socket events
     socket.on('clear-chat-history', ({ roomId }) => {
+      socket.to(roomId).emit('user-cleared-chat-history');
       clearChatHistory(roomId);
     });
 
@@ -112,8 +119,8 @@ function socketIOServer(server, MAX_CAPACITY) {
           });
         }
       });
-      console.log(socketsInRoom);
-      console.log(usersInRoom);
+      // console.log(socketsInRoom);
+      // console.log(usersInRoom);
     });
   });
 }
