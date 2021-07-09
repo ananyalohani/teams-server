@@ -11,6 +11,7 @@ function socketIOServer(server, MAX_CAPACITY) {
     addChatToSession,
     clearChatHistory,
     addRoomToUser,
+    addUserToRoom,
   } = require('./requests');
 
   // keep track of all the rooms and the users
@@ -50,8 +51,7 @@ function socketIOServer(server, MAX_CAPACITY) {
       // join the room through the socket
       socket.join(roomId);
       addRoomToUser(user.id, roomId);
-      // add the user obj to the room and send the updated user
-      // list to all the sockets in the room
+      addUserToRoom(user, roomId);
 
       if (usersInRoom[roomId]) {
         const item = usersInRoom[roomId]?.find((u) => u.id === user.id);

@@ -96,9 +96,37 @@ async function addRoomToUser(userId, roomId) {
   }
 }
 
+async function addUserToRoom(user, roomId) {
+  try {
+    const response = await fetch(`${url.client}/api/rooms?roomId=${roomId}`);
+    const users = await response.json();
+    const item = users.find((u) => u.id === user.id);
+    if (!item) {
+      users.push(user);
+      const stringifiedUsers = JSON.stringify(users);
+
+      const reqBody = {
+        roomId: roomId,
+        users: stringifiedUsers,
+      };
+
+      fetch(`${url.client}/api/rooms`, {
+        method: 'PUT',
+        body: JSON.stringify(reqBody),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
 module.exports = {
   getChatSession,
   addChatToSession,
   clearChatHistory,
   addRoomToUser,
+  addUserToRoom,
 };
