@@ -1,8 +1,10 @@
 function socketIOServer(server, MAX_CAPACITY) {
   // initialise a Socket.io server
+
+  const { allowedURLs } = require('./config');
   const io = require('socket.io')(server, {
     cors: {
-      origin: '*',
+      origin: allowedURLs,
     },
   });
 
@@ -61,33 +63,27 @@ function socketIOServer(server, MAX_CAPACITY) {
       }
 
       getChatSession(roomId).then((chatHistory) => {
-        // console.log(chatHistory);
         io.sockets.in(roomId).emit('chat-history', { chatHistory });
       });
 
       io.sockets
         .in(roomId)
         .emit('updated-users-list', { usersInThisRoom: usersInRoom[roomId] });
-
-      // console.log(socketsInRoom);
-      // console.log(usersInRoom);
     });
 
     // listen to incoming 'send-message' socket events
     socket.on('send-message', ({ roomId, chat }) => {
-      // emit the message to all the sockets connected to the room
       addChatToSession(chat, roomId);
       socket.to(roomId).emit('receive-message', { chat });
     });
 
     // listen to incoming 'raise-hand' socket events
     socket.on('raise-hand', ({ userId, roomId }) => {
-      // emit the raise-hand event to all sockets connected to the room
       socket.to(roomId).emit('user-raised-hand', { userId });
     });
 
+    // listen to incoming 'unraise-hand' socket events
     socket.on('unraise-hand', ({ userId, roomId }) => {
-      // emit the raise-hand event to all sockets connected to the room
       socket.to(roomId).emit('user-unraised-hand', { userId });
     });
 
@@ -99,7 +95,6 @@ function socketIOServer(server, MAX_CAPACITY) {
 
     // on disconnection of the socket
     socket.on('disconnect', () => {
-      // remove the user from the existing array
       const rooms = Object.keys(socketsInRoom);
       rooms.forEach((roomId) => {
         if (socketsInRoom[roomId].includes(socket.id)) {
@@ -119,8 +114,6 @@ function socketIOServer(server, MAX_CAPACITY) {
           });
         }
       });
-      // console.log(socketsInRoom);
-      // console.log(usersInRoom);
     });
   });
 }

@@ -16,7 +16,7 @@ app.use(
   })
 );
 
-app.use(cors());
+app.use(cors({ origin: config.allowedURLs, methods: ['GET', 'POST'] }));
 app.use(express.json());
 
 const sendTokenResponse = (token, res) => {
