@@ -8,7 +8,7 @@ const { socketIOServer } = require('./socket');
 const cors = require('cors');
 
 const PORT = 5100; // port on which the server runs
-const MAX_CAPACITY = 2; // maximum capacity of the room
+const MAX_CAPACITY = 25; // maximum capacity of the room
 
 app.use(
   express.urlencoded({
